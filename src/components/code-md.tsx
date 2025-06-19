@@ -15,7 +15,7 @@ export function CodeMD({
   if (!className) {
     return (
       <code
-        className="px-1.5 py-1 bg-black/10 text-black/80 rounded text-[13px] font-mono text-sm"
+        className="px-1.5 py-1 bg-black/5 text-black/80 rounded text-[13px] font-mono text-sm"
         {...props}
       >
         {children}

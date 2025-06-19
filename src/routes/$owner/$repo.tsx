@@ -2,7 +2,6 @@ import { createFileRoute, redirect } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 
 import type { AuthContextType } from "../../auth";
-import { Markdown } from "../../components/markdown";
 import { FileTree } from "../../components/file-tree";
 import {
   githubFileTreeQueryOptions,
@@ -10,6 +9,7 @@ import {
 } from "../../queries/github";
 import type { QueryClient } from "@tanstack/react-query";
 import { useAuth } from "../../auth";
+import { Markdown } from "../../components/markdown";
 
 export const Route = createFileRoute("/$owner/$repo")({
   component: RouteComponent,
@@ -55,13 +55,13 @@ function RouteComponent() {
             {owner}/{repo}
           </h2>
           <FileTree files={files} />
-          <Markdown
-            filename={"README.md"}
-            markdown={readme}
-            owner={owner}
-            repo={repo}
-          />
         </div>
+        <Markdown
+          filename={"README.md"}
+          markdown={readme}
+          owner={owner}
+          repo={repo}
+        />
       </div>
     </>
   );

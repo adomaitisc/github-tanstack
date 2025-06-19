@@ -1,4 +1,4 @@
-import icons from "../icons.json";
+import { icons } from "../icons";
 import { formatRelativeDate } from "../utils/date";
 
 export interface FileEntry {
@@ -14,10 +14,12 @@ export function FileTree({ files }: { files: FileEntry[] }) {
     if (type === "tree") {
       return icons.tree;
     }
-    const extension = name.split(".").pop()?.toLowerCase();
+    const extension = name.startsWith(".")
+      ? "dotfile"
+      : name.split(".").pop()?.toLowerCase();
     return extension
-      ? icons[extension as keyof typeof icons] || icons.txt
-      : icons.txt;
+      ? icons[extension as keyof typeof icons] || icons.tree
+      : icons.tree;
   };
 
   return (

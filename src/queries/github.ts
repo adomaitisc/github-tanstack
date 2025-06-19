@@ -2,7 +2,48 @@ import { queryOptions } from "@tanstack/react-query";
 
 export class NotFoundError extends Error {}
 
-// User info
+// --- Query Options (exports at the top) ---
+export const githubUserQueryOptions = (accessToken: string) =>
+  queryOptions({
+    queryKey: ["github-user", accessToken],
+    queryFn: () => fetchGitHubUser(accessToken),
+    enabled: !!accessToken,
+    staleTime: 1000 * 60 * 5,
+  });
+
+export const githubRepositoriesQueryOptions = (accessToken: string) =>
+  queryOptions({
+    queryKey: ["github-repos", accessToken],
+    queryFn: () => fetchGitHubRepositories(accessToken),
+    enabled: !!accessToken,
+    staleTime: 1000 * 60 * 5,
+  });
+
+export const githubFileTreeQueryOptions = (
+  accessToken: string,
+  owner: string,
+  repo: string
+) =>
+  queryOptions({
+    queryKey: ["github-file-tree", owner, repo],
+    queryFn: () => fetchGitHubFileTree(accessToken, owner, repo),
+    enabled: !!accessToken,
+    staleTime: 1000 * 60 * 5,
+  });
+
+export const githubReadmeQueryOptions = (
+  accessToken: string,
+  owner: string,
+  repo: string
+) =>
+  queryOptions({
+    queryKey: ["github-readme", owner, repo],
+    queryFn: () => fetchGitHubReadme(accessToken, owner, repo),
+    enabled: !!accessToken,
+    staleTime: 1000 * 60 * 5,
+  });
+
+// --- Fetch Functions (bottom of file) ---
 const fetchGitHubUser = async (accessToken: string) => {
   const res = await fetch("https://api.github.com/user", {
     headers: {
@@ -14,15 +55,6 @@ const fetchGitHubUser = async (accessToken: string) => {
   return res.json();
 };
 
-export const githubUserQueryOptions = (accessToken: string) =>
-  queryOptions({
-    queryKey: ["github-user", accessToken],
-    queryFn: () => fetchGitHubUser(accessToken),
-    enabled: !!accessToken,
-    staleTime: 1000 * 60 * 5,
-  });
-
-// User repositories
 const fetchGitHubRepositories = async (accessToken: string) => {
   const res = await fetch(
     "https://api.github.com/user/repos?visibility=all&affiliation=owner,collaborator,organization_member&sort=pushed&per_page=100",
@@ -37,20 +69,44 @@ const fetchGitHubRepositories = async (accessToken: string) => {
   return res.json();
 };
 
-export const githubRepositoriesQueryOptions = (accessToken: string) =>
-  queryOptions({
-    queryKey: ["github-repos", accessToken],
-    queryFn: () => fetchGitHubRepositories(accessToken),
-    enabled: !!accessToken,
-    staleTime: 1000 * 60 * 5,
-  });
+const fetchLastCommitForPath = async (
+  accessToken: string,
+  owner: string,
+  repo: string,
+  path: string
+) => {
+  try {
+    const commitRes = await fetch(
+      `https://api.github.com/repos/${owner}/${repo}/commits?path=${encodeURIComponent(path)}&per_page=1`,
+      {
+        headers: {
+          Authorization: `Bearer ${accessToken}`,
+          Accept: "application/vnd.github+json",
+        },
+      }
+    );
+    if (commitRes.ok) {
+      const commits = await commitRes.json();
+      if (commits.length > 0) {
+        return {
+          lastCommitMessage: commits[0].commit.message,
+          lastCommitDate: commits[0].commit.committer.date,
+        };
+      }
+    }
+  } catch {}
+  return {
+    lastCommitMessage: undefined,
+    lastCommitDate: undefined,
+  };
+};
 
-// File tree with commit info
 const fetchGitHubFileTree = async (
   accessToken: string,
   owner: string,
   repo: string
 ) => {
+  // 1. Fetch the file tree (blobs and trees)
   const expr = `HEAD:`;
   const res = await fetch("https://api.github.com/graphql", {
     method: "POST",
@@ -75,31 +131,11 @@ const fetchGitHubFileTree = async (
   const data = await res.json();
   const entries = data.data.repository?.object?.entries || [];
 
-  // Get commit info for each file using REST API
+  // 2. Fetch last commit info for each file/folder (blob/tree)
   const filesWithCommits = await Promise.all(
     entries.map(async (entry: any) => {
-      let lastCommitMessage = undefined;
-      let lastCommitDate = undefined;
-      if (entry.type === "blob") {
-        try {
-          const commitRes = await fetch(
-            `https://api.github.com/repos/${owner}/${repo}/commits?path=${entry.name}&per_page=1`,
-            {
-              headers: {
-                Authorization: `Bearer ${accessToken}`,
-                Accept: "application/vnd.github+json",
-              },
-            }
-          );
-          if (commitRes.ok) {
-            const commits = await commitRes.json();
-            if (commits.length > 0) {
-              lastCommitMessage = commits[0].commit.message;
-              lastCommitDate = commits[0].commit.committer.date;
-            }
-          }
-        } catch {}
-      }
+      const { lastCommitMessage, lastCommitDate } =
+        await fetchLastCommitForPath(accessToken, owner, repo, entry.name);
       return {
         name: entry.name,
         type: entry.type,
@@ -112,19 +148,6 @@ const fetchGitHubFileTree = async (
   return filesWithCommits;
 };
 
-export const githubFileTreeQueryOptions = (
-  accessToken: string,
-  owner: string,
-  repo: string
-) =>
-  queryOptions({
-    queryKey: ["github-file-tree", owner, repo],
-    queryFn: () => fetchGitHubFileTree(accessToken, owner, repo),
-    enabled: !!accessToken,
-    staleTime: 1000 * 60 * 5,
-  });
-
-// README
 const fetchGitHubReadme = async (
   accessToken: string,
   owner: string,
@@ -151,15 +174,3 @@ const fetchGitHubReadme = async (
   const data = await res.json();
   return data.data.repository?.object?.text || null;
 };
-
-export const githubReadmeQueryOptions = (
-  accessToken: string,
-  owner: string,
-  repo: string
-) =>
-  queryOptions({
-    queryKey: ["github-readme", owner, repo],
-    queryFn: () => fetchGitHubReadme(accessToken, owner, repo),
-    enabled: !!accessToken,
-    staleTime: 1000 * 60 * 5,
-  });
