@@ -10,12 +10,18 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as HomeRouteImport } from './routes/home'
+import { Route as RepoRouteImport } from './routes/$repo'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as AuthCallbackRouteImport } from './routes/auth.callback'
 
 const HomeRoute = HomeRouteImport.update({
   id: '/home',
   path: '/home',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const RepoRoute = RepoRouteImport.update({
+  id: '/$repo',
+  path: '/$repo',
   getParentRoute: () => rootRouteImport,
 } as any)
 const IndexRoute = IndexRouteImport.update({
@@ -31,30 +37,34 @@ const AuthCallbackRoute = AuthCallbackRouteImport.update({
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/$repo': typeof RepoRoute
   '/home': typeof HomeRoute
   '/auth/callback': typeof AuthCallbackRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/$repo': typeof RepoRoute
   '/home': typeof HomeRoute
   '/auth/callback': typeof AuthCallbackRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/$repo': typeof RepoRoute
   '/home': typeof HomeRoute
   '/auth/callback': typeof AuthCallbackRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/home' | '/auth/callback'
+  fullPaths: '/' | '/$repo' | '/home' | '/auth/callback'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/home' | '/auth/callback'
-  id: '__root__' | '/' | '/home' | '/auth/callback'
+  to: '/' | '/$repo' | '/home' | '/auth/callback'
+  id: '__root__' | '/' | '/$repo' | '/home' | '/auth/callback'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  RepoRoute: typeof RepoRoute
   HomeRoute: typeof HomeRoute
   AuthCallbackRoute: typeof AuthCallbackRoute
 }
@@ -66,6 +76,13 @@ declare module '@tanstack/react-router' {
       path: '/home'
       fullPath: '/home'
       preLoaderRoute: typeof HomeRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/$repo': {
+      id: '/$repo'
+      path: '/$repo'
+      fullPath: '/$repo'
+      preLoaderRoute: typeof RepoRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/': {
@@ -87,6 +104,7 @@ declare module '@tanstack/react-router' {
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  RepoRoute: RepoRoute,
   HomeRoute: HomeRoute,
   AuthCallbackRoute: AuthCallbackRoute,
 }

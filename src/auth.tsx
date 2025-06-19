@@ -1,4 +1,10 @@
-import { createContext, useContext, useState, useCallback } from "react";
+import {
+  createContext,
+  useContext,
+  useState,
+  useCallback,
+  useEffect,
+} from "react";
 import type { ReactNode } from "react";
 
 interface Tokens {
@@ -6,7 +12,7 @@ interface Tokens {
   refresh_token: string;
 }
 
-interface AuthContextType {
+export interface AuthContextType {
   tokens: Tokens | null;
   isAuthenticated: boolean;
   isPending: boolean;
@@ -17,8 +23,20 @@ interface AuthContextType {
 
 const AuthContext = createContext<AuthContextType | null>(null);
 
+// localStorage key for storing tokens
+const TOKENS_STORAGE_KEY = "ghlf_auth_tokens";
+
 export function AuthProvider({ children }: { children: ReactNode }) {
-  const [tokens, setTokens] = useState<Tokens | null>(null);
+  const [tokens, setTokens] = useState<Tokens | null>(() => {
+    // Load tokens from localStorage on initialization
+    try {
+      const storedTokens = localStorage.getItem(TOKENS_STORAGE_KEY);
+      return storedTokens ? JSON.parse(storedTokens) : null;
+    } catch (error) {
+      console.error("Failed to load tokens from localStorage:", error);
+      return null;
+    }
+  });
   const [isPending, setIsPending] = useState<boolean>(false);
 
   const requestToken = useCallback(() => {
@@ -55,6 +73,23 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setTokens(null);
     setIsPending(false);
   }, []);
+
+  // Save tokens to localStorage whenever they change
+  useEffect(() => {
+    if (tokens) {
+      try {
+        localStorage.setItem(TOKENS_STORAGE_KEY, JSON.stringify(tokens));
+      } catch (error) {
+        console.error("Failed to save tokens to localStorage:", error);
+      }
+    } else {
+      try {
+        localStorage.removeItem(TOKENS_STORAGE_KEY);
+      } catch (error) {
+        console.error("Failed to remove tokens from localStorage:", error);
+      }
+    }
+  }, [tokens]);
 
   return (
     <AuthContext.Provider

@@ -1,21 +1,23 @@
-import { createFileRoute, useNavigate } from "@tanstack/react-router";
-import { useAuth } from "../auth";
+import {
+  createFileRoute,
+  Link,
+  redirect,
+  useNavigate,
+} from "@tanstack/react-router";
+import { useAuth, type AuthContextType } from "../auth";
 import { useEffect, useRef, useState } from "react";
 
 export const Route = createFileRoute("/home")({
   component: Home,
+  beforeLoad: ({ context }) => {
+    const authContext = context as { auth: AuthContextType };
+    if (!authContext.auth.isAuthenticated) {
+      throw redirect({ to: "/" });
+    }
+  },
 });
 
 function Home() {
-  const navigate = useNavigate();
-  const { isAuthenticated } = useAuth();
-
-  useEffect(() => {
-    if (!isAuthenticated) {
-      navigate({ to: "/" });
-    }
-  }, [isAuthenticated, navigate]);
-
   return (
     <div className="min-h-[80vh] flex flex-col items-center justify-center">
       <div className="w-full max-w-2xl px-4">
@@ -28,8 +30,14 @@ function Home() {
 
 function UserInfo() {
   const once = useRef(false);
+  const navigate = useNavigate();
   const { tokens, logout } = useAuth();
   const [user, setUser] = useState<any | null>(null);
+
+  function handleLogout() {
+    logout();
+    navigate({ to: "/" });
+  }
 
   useEffect(() => {
     const fetchUser = async () => {
@@ -49,23 +57,26 @@ function UserInfo() {
   }, [tokens, once]);
 
   return (
-    <div className="flex flex-col items-center justify-center">
-      <img
-        src={user?.avatar_url}
-        alt="avatar"
-        className="w-16 h-16 rounded-full"
-      />
-      <div className="text-2xl font-bold">{user?.login}</div>
-      <div className="text-sm text-gray-500">{user?.name}</div>
-      <div className="p-4">
-        <button
-          onClick={logout}
-          className="w-full px-6 py-3 text-sm rounded-full bg-gray-800 text-white hover:bg-gray-900 transition-colors duration-200 font-medium shadow-sm flex items-center justify-center gap-2"
-        >
-          Logout
-        </button>
+    <>
+      <title>Home</title>
+      <div className="flex flex-col items-center justify-center">
+        <img
+          src={user?.avatar_url}
+          alt="avatar"
+          className="w-16 h-16 rounded-full"
+        />
+        <div className="text-2xl font-bold">{user?.login}</div>
+        <div className="text-sm text-gray-500">{user?.name}</div>
+        <div className="p-4">
+          <button
+            onClick={handleLogout}
+            className="w-full px-6 py-3 text-sm rounded-full bg-gray-800 text-white hover:bg-gray-900 transition-colors duration-200 font-medium shadow-sm flex items-center justify-center gap-2"
+          >
+            Logout
+          </button>
+        </div>
       </div>
-    </div>
+    </>
   );
 }
 
@@ -99,7 +110,9 @@ function Repositories() {
       <div className="text-2xl font-bold">Repositories</div>
       <div className="text-sm text-gray-500">
         {repositories.map((repository) => (
-          <div
+          <Link
+            to={`/$repo`}
+            params={{ repo: repository.name }}
             key={repository.id}
             className="flex items-center justify-between"
           >
@@ -107,7 +120,7 @@ function Repositories() {
             <p className="text-sm text-gray-500">
               {repository.private ? "Private" : "Public"}
             </p>
-          </div>
+          </Link>
         ))}
       </div>
     </div>

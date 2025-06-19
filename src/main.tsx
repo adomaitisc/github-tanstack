@@ -8,7 +8,14 @@ import { AuthProvider, useAuth } from "./auth";
 const router = createRouter({
   routeTree,
   context: {
-    auth: undefined!, // This will be set after we wrap the app in an AuthProvider
+    auth: {
+      isAuthenticated: false,
+      isPending: false,
+      requestToken: () => {},
+      exchangeCode: () => Promise.resolve(false),
+      logout: () => {},
+      tokens: null,
+    },
   },
 });
 
