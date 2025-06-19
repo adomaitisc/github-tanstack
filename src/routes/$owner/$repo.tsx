@@ -1,19 +1,15 @@
 import { createFileRoute, redirect } from "@tanstack/react-router";
-import { useState, useEffect, useRef } from "react";
+
 import type { AuthContextType } from "../../auth";
 import { useAuth } from "../../auth";
-import icons from "../../icons.json";
+import { useQuery } from "@tanstack/react-query";
+import { Markdown } from "../../components/ReadmeComponent";
+import { FileTree } from "../../components/file-tree";
 
-interface FileEntry {
-  name: string;
-  type: "blob" | "tree";
-  oid: string;
-}
-
-interface RepositoryData {
+interface ReadmeData {
   repository: {
     object: {
-      entries: FileEntry[];
+      text: string;
     };
   };
 }
@@ -30,117 +26,134 @@ export const Route = createFileRoute("/$owner/$repo")({
 
 function RouteComponent() {
   const { owner, repo } = Route.useParams();
-  return (
-    <>
-      <title>
-        {owner}/{repo}
-      </title>
-      <div className="flex h-screen flex-col items-center justify-center">
-        <div className="w-full max-w-2xl px-4">
-          <h2 className="text-2xl font-bold mb-4 text-center">
-            {owner}/{repo}
-          </h2>
-          <FileTree owner={owner} name={repo} />
-        </div>
-      </div>
-    </>
-  );
-}
-
-function FileTree({ owner, name }: { owner: string; name: string }) {
-  const once = useRef(false);
   const { tokens } = useAuth();
-  const [files, setFiles] = useState<FileEntry[]>([]);
 
-  async function fetchTree() {
-    const expr = `HEAD:`;
-
-    const response = await fetch("https://api.github.com/graphql", {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${tokens!.access_token}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        query: `query Repo($owner:String!,$name:String!,$expr:String!){
+  const { data: files = [] } = useQuery({
+    queryKey: ["github-file-tree", owner, repo],
+    queryFn: async () => {
+      if (!tokens) return [];
+      const expr = `HEAD:`;
+      const response = await fetch("https://api.github.com/graphql", {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${tokens.access_token}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          query: `query Repo($owner:String!,$name:String!,$expr:String!){
             repository(owner:$owner,name:$name){
               object(expression:$expr){
                 ... on Tree { entries {
-                  name type
-                  oid: __typename
+                  name type oid
                 }}
               }
             }
           }`,
-        variables: { owner, name, expr },
-      }),
-    });
+          variables: { owner, name: repo, expr },
+        }),
+      });
+      if (!response.ok) {
+        throw new Error(`GraphQL request failed: ${response.status}`);
+      }
+      const data = await response.json();
+      const entries = data.data.repository?.object?.entries || [];
 
-    if (!response.ok) {
-      throw new Error(`GraphQL request failed: ${response.status}`);
-    }
+      // Get commit info for each file using REST API
+      const filesWithCommits = await Promise.all(
+        entries.map(async (entry: any) => {
+          let lastCommitMessage = undefined;
+          let lastCommitDate = undefined;
 
-    const data: { data: RepositoryData } = await response.json();
+          if (entry.type === "blob") {
+            try {
+              const commitResponse = await fetch(
+                `https://api.github.com/repos/${owner}/${repo}/commits?path=${entry.name}&per_page=1`,
+                {
+                  headers: {
+                    Authorization: `Bearer ${tokens.access_token}`,
+                    Accept: "application/vnd.github+json",
+                  },
+                }
+              );
+              if (commitResponse.ok) {
+                const commits = await commitResponse.json();
+                if (commits.length > 0) {
+                  lastCommitMessage = commits[0].commit.message;
+                  lastCommitDate = commits[0].commit.committer.date;
+                }
+              }
+            } catch (error) {
+              console.error(
+                `Failed to get commit info for ${entry.name}:`,
+                error
+              );
+            }
+          }
 
-    if (!data.data.repository?.object?.entries) {
-      setFiles([]);
-      return;
-    }
+          return {
+            name: entry.name,
+            type: entry.type,
+            oid: entry.oid,
+            lastCommitMessage,
+            lastCommitDate,
+          };
+        })
+      );
 
-    setFiles(data.data.repository.object.entries);
-  }
+      return filesWithCommits;
+    },
+    enabled: !!tokens,
+    staleTime: 1000 * 60 * 5, // 5 minutes
+  });
 
-  useEffect(() => {
-    if (tokens && !once.current) {
-      once.current = true;
-      fetchTree();
-    }
-  }, [tokens]);
-
-  const getFileIcon = (name: string, type: string) => {
-    if (type === "tree") {
-      return icons.tree;
-    }
-    const extension = name.split(".").pop()?.toLowerCase();
-    return extension
-      ? icons[extension as keyof typeof icons] || icons.txt
-      : icons.txt;
-  };
+  const { data: readme } = useQuery({
+    queryKey: ["github-readme", owner, repo],
+    queryFn: async () => {
+      if (!tokens) return null;
+      const response = await fetch("https://api.github.com/graphql", {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${tokens.access_token}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          query: `query Repo($owner:String!,$name:String!){
+            repository(owner:$owner,name:$name){
+              object(expression:"HEAD:README.md"){
+                ... on Blob { text }
+              }
+            }
+          }`,
+          variables: { owner, name: repo },
+        }),
+      });
+      if (!response.ok) {
+        return null;
+      }
+      const data: { data: ReadmeData } = await response.json();
+      return data.data.repository?.object?.text || null;
+    },
+    enabled: !!tokens,
+    staleTime: 1000 * 60 * 5, // 5 minutes
+  });
 
   return (
-    <div className="flex flex-col items-center justify-center">
-      <table className="w-full">
-        <thead>
-          <tr>
-            <th className="text-left">file</th>
-          </tr>
-        </thead>
-        <tbody>
-          {files.length === 0 ? (
-            <tr>
-              <td
-                colSpan={2}
-                className="text-center text-sm text-gray-500 py-4"
-              >
-                No files found
-              </td>
-            </tr>
-          ) : (
-            files.map((file) => (
-              <tr key={file.name} className="hover:bg-gray-100">
-                <td className="p-0.5">
-                  <div className="flex items-center cursor-pointer">
-                    <span className="mr-2">
-                      {getFileIcon(file.name, file.type)}
-                    </span>
-                    <span className="text-sm text-gray-500">{file.name}</span>
-                  </div>
-                </td>
-              </tr>
-            ))
-          )}
-        </tbody>
-      </table>
-    </div>
+    <>
+      <title>{`${owner}/${repo}`}</title>
+      <div className="flex flex-col items-center justify-start py-[10vh]">
+        <div className="w-full max-w-2xl px-4">
+          <h2 className="text-2xl font-bold mb-4 text-center">
+            {owner}/{repo}
+          </h2>
+          <FileTree files={files} />
+          <Markdown
+            filename={"README.md"}
+            markdown={readme}
+            owner={owner}
+            repo={repo}
+          />
+        </div>
+      </div>
+    </>
   );
 }

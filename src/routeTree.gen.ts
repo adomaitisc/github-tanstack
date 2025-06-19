@@ -10,6 +10,7 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as NotFoundRouteImport } from './routes/not-found'
+import { Route as HomeRouteImport } from './routes/home'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as OwnerIndexRouteImport } from './routes/$owner/index'
 import { Route as AuthSignoutRouteImport } from './routes/auth.signout'
@@ -19,6 +20,11 @@ import { Route as OwnerRepoRouteImport } from './routes/$owner/$repo'
 const NotFoundRoute = NotFoundRouteImport.update({
   id: '/not-found',
   path: '/not-found',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const HomeRoute = HomeRouteImport.update({
+  id: '/home',
+  path: '/home',
   getParentRoute: () => rootRouteImport,
 } as any)
 const IndexRoute = IndexRouteImport.update({
@@ -49,6 +55,7 @@ const OwnerRepoRoute = OwnerRepoRouteImport.update({
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/home': typeof HomeRoute
   '/not-found': typeof NotFoundRoute
   '/$owner/$repo': typeof OwnerRepoRoute
   '/auth/callback': typeof AuthCallbackRoute
@@ -57,6 +64,7 @@ export interface FileRoutesByFullPath {
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/home': typeof HomeRoute
   '/not-found': typeof NotFoundRoute
   '/$owner/$repo': typeof OwnerRepoRoute
   '/auth/callback': typeof AuthCallbackRoute
@@ -66,6 +74,7 @@ export interface FileRoutesByTo {
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/home': typeof HomeRoute
   '/not-found': typeof NotFoundRoute
   '/$owner/$repo': typeof OwnerRepoRoute
   '/auth/callback': typeof AuthCallbackRoute
@@ -76,6 +85,7 @@ export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
     | '/'
+    | '/home'
     | '/not-found'
     | '/$owner/$repo'
     | '/auth/callback'
@@ -84,6 +94,7 @@ export interface FileRouteTypes {
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
+    | '/home'
     | '/not-found'
     | '/$owner/$repo'
     | '/auth/callback'
@@ -92,6 +103,7 @@ export interface FileRouteTypes {
   id:
     | '__root__'
     | '/'
+    | '/home'
     | '/not-found'
     | '/$owner/$repo'
     | '/auth/callback'
@@ -101,6 +113,7 @@ export interface FileRouteTypes {
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  HomeRoute: typeof HomeRoute
   NotFoundRoute: typeof NotFoundRoute
   OwnerRepoRoute: typeof OwnerRepoRoute
   AuthCallbackRoute: typeof AuthCallbackRoute
@@ -115,6 +128,13 @@ declare module '@tanstack/react-router' {
       path: '/not-found'
       fullPath: '/not-found'
       preLoaderRoute: typeof NotFoundRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/home': {
+      id: '/home'
+      path: '/home'
+      fullPath: '/home'
+      preLoaderRoute: typeof HomeRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/': {
@@ -157,6 +177,7 @@ declare module '@tanstack/react-router' {
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  HomeRoute: HomeRoute,
   NotFoundRoute: NotFoundRoute,
   OwnerRepoRoute: OwnerRepoRoute,
   AuthCallbackRoute: AuthCallbackRoute,

@@ -1,6 +1,6 @@
 import { createFileRoute, Link, redirect } from "@tanstack/react-router";
 import { useAuth, type AuthContextType } from "../../auth";
-import { useEffect, useRef, useState } from "react";
+import { useQuery } from "@tanstack/react-query";
 
 export const Route = createFileRoute("/$owner/")({
   component: Owner,
@@ -11,14 +11,14 @@ export const Route = createFileRoute("/$owner/")({
     } else if (params.owner !== authContext.auth.user?.login) {
       throw redirect({ to: "/not-found" });
     }
-    console.log(params.owner, authContext.auth.user?.login);
   },
 });
 
 function Owner() {
+  const { user } = useAuth();
   return (
     <>
-      <title>Owner</title>
+      <title>{user?.login}</title>
       <div className="flex h-screen flex-col items-center justify-center">
         <div className="w-full max-w-2xl px-4">
           <UserInfo />
@@ -45,29 +45,25 @@ function UserInfo() {
 }
 
 function Repositories() {
-  const once = useRef(false);
   const { tokens } = useAuth();
-  const [repositories, setRepositories] = useState<any[]>([]);
-
-  useEffect(() => {
-    const fetchRepositories = async () => {
-      if (tokens && !once.current) {
-        once.current = true;
-        const repositoriesResponse = await fetch(
-          "https://api.github.com/user/repos?visibility=all&affiliation=owner,collaborator,organization_member&sort=pushed&per_page=100",
-          {
-            headers: {
-              Authorization: `Bearer ${tokens!.access_token}`,
-              Accept: "application/vnd.github+json",
-            },
-          }
-        );
-        const repositories = await repositoriesResponse.json();
-        setRepositories(repositories);
-      }
-    };
-    fetchRepositories();
-  }, [tokens]);
+  const { data: repositories = [] } = useQuery({
+    queryKey: ["github-repos", tokens?.access_token],
+    queryFn: async () => {
+      if (!tokens) return [];
+      const repositoriesResponse = await fetch(
+        "https://api.github.com/user/repos?visibility=all&affiliation=owner,collaborator,organization_member&sort=pushed&per_page=100",
+        {
+          headers: {
+            Authorization: `Bearer ${tokens.access_token}`,
+            Accept: "application/vnd.github+json",
+          },
+        }
+      );
+      return repositoriesResponse.json();
+    },
+    enabled: !!tokens,
+    staleTime: 1000 * 60 * 5, // 5 minutes
+  });
 
   return (
     <div className="flex flex-col items-center justify-center">
@@ -79,7 +75,7 @@ function Repositories() {
           </tr>
         </thead>
         <tbody>
-          {repositories.map((repository) => (
+          {repositories.map((repository: any) => (
             <tr key={repository.id} className="hover:bg-gray-100">
               <td>
                 <Link
