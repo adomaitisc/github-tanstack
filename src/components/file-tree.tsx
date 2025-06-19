@@ -1,4 +1,5 @@
 import icons from "../icons.json";
+import { formatRelativeDate } from "../utils/date";
 
 export interface FileEntry {
   name: string;
@@ -22,11 +23,11 @@ export function FileTree({ files }: { files: FileEntry[] }) {
   return (
     <div className="flex flex-col items-center justify-center">
       <table className="w-full">
-        <thead>
+        <thead className="text-sm text-black/70">
           <tr>
             <th className="text-left">file</th>
             <th className="text-left">last commit</th>
-            <th className="text-left">date</th>
+            <th className="text-right">date</th>
           </tr>
         </thead>
         <tbody>
@@ -34,28 +35,28 @@ export function FileTree({ files }: { files: FileEntry[] }) {
             <tr>
               <td
                 colSpan={3}
-                className="text-center text-sm text-gray-500 py-4"
+                className="text-center text-sm text-black/60 py-4"
               >
                 No files found
               </td>
             </tr>
           ) : (
             files.map((file) => (
-              <tr key={file.name} className="hover:bg-gray-100">
+              <tr key={file.name} className="hover:bg-black/5">
                 <td className="p-0.5">
                   <div className="flex items-center cursor-pointer">
-                    <span className="mr-2">
+                    <span className="mr-1">
                       {getFileIcon(file.name, file.type)}
                     </span>
-                    <span className="text-sm text-gray-500">{file.name}</span>
+                    <span className="text-sm text-black/60">{file.name}</span>
                   </div>
                 </td>
-                <td className="p-0.5 text-sm text-gray-600 max-w-[200px] truncate">
+                <td className="p-0.5 text-sm text-black/50 max-w-[200px] truncate">
                   {file.lastCommitMessage || "-"}
                 </td>
-                <td className="p-0.5 text-sm text-gray-400">
+                <td className="p-0.5 text-sm text-right text-black/50">
                   {file.lastCommitDate
-                    ? new Date(file.lastCommitDate).toLocaleString()
+                    ? formatRelativeDate(file.lastCommitDate)
                     : "-"}
                 </td>
               </tr>

@@ -6,6 +6,10 @@ import {
 } from "@tanstack/react-router";
 import { useAuth, type AuthContextType } from "../auth";
 import { useQuery } from "@tanstack/react-query";
+import {
+  githubUserQueryOptions,
+  githubRepositoriesQueryOptions,
+} from "../queries/github";
 
 export const Route = createFileRoute("/home")({
   component: Home,
@@ -33,23 +37,10 @@ function Home() {
 
 function UserInfo() {
   const navigate = useNavigate();
-  const { tokens, logout } = useAuth();
-
-  const { data: user } = useQuery({
-    queryKey: ["github-user", tokens?.access_token],
-    queryFn: async () => {
-      if (!tokens) return null;
-      const userResponse = await fetch("https://api.github.com/user", {
-        headers: {
-          Authorization: `Bearer ${tokens.access_token}`,
-          Accept: "application/vnd.github+json",
-        },
-      });
-      return userResponse.json();
-    },
-    enabled: !!tokens,
-    staleTime: 1000 * 60 * 5, // 5 minutes
-  });
+  const { logout, tokens } = useAuth();
+  const { data: user } = useQuery(
+    githubUserQueryOptions(tokens?.access_token ?? "")
+  );
 
   function handleLogout() {
     logout();
@@ -64,11 +55,11 @@ function UserInfo() {
         className="w-16 h-16 rounded-full"
       />
       <span className="text-2xl font-bold">{user?.login}</span>
-      <span className="text-sm text-gray-500">{user?.name}</span>
+      <span className="text-sm text-black/60">{user?.name}</span>
       <div className="p-4">
         <button
           onClick={handleLogout}
-          className="w-full px-6 py-3 text-sm rounded-full bg-gray-800 text-white hover:bg-gray-900 transition-colors duration-200 font-medium shadow-sm flex items-center justify-center gap-2"
+          className="w-full px-6 py-3 text-sm rounded-full bg-black/80 text-white hover:bg-black/90 transition-colors duration-200 font-medium shadow-sm flex items-center justify-center gap-2"
         >
           Logout
         </button>
@@ -79,29 +70,14 @@ function UserInfo() {
 
 function Repositories() {
   const { tokens } = useAuth();
-  const { data: repositories = [] } = useQuery({
-    queryKey: ["github-repos", tokens?.access_token],
-    queryFn: async () => {
-      if (!tokens) return [];
-      const repositoriesResponse = await fetch(
-        "https://api.github.com/user/repos?visibility=all&affiliation=owner,collaborator,organization_member&sort=pushed&per_page=100",
-        {
-          headers: {
-            Authorization: `Bearer ${tokens.access_token}`,
-            Accept: "application/vnd.github+json",
-          },
-        }
-      );
-      return repositoriesResponse.json();
-    },
-    enabled: !!tokens,
-    staleTime: 1000 * 60 * 5, // 5 minutes
-  });
+  const { data: repositories = [] } = useQuery(
+    githubRepositoriesQueryOptions(tokens?.access_token ?? "")
+  );
 
   return (
     <div className="flex flex-col items-center justify-center">
       <h2 className="text-2xl font-bold">Repositories</h2>
-      <div className="text-sm text-gray-500">
+      <div className="text-sm text-black/60">
         {repositories.map((repository: any) => (
           <Link
             to={`$owner/$repo`}
@@ -109,8 +85,8 @@ function Repositories() {
             key={repository.id}
             className="flex items-center justify-between"
           >
-            <span className="text-sm text-gray-500">{repository.name}</span>
-            <span className="text-sm text-gray-500">
+            <span className="text-sm text-black/60">{repository.name}</span>
+            <span className="text-sm text-black/60">
               {repository.private ? "Private" : "Public"}
             </span>
           </Link>

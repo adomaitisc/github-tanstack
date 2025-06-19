@@ -5,9 +5,12 @@ import { routeTree } from "./routeTree.gen";
 import { AuthProvider, useAuth } from "./auth";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 
+const queryClient = new QueryClient();
+
 // Create a new router instance
 const router = createRouter({
   routeTree,
+  defaultPreload: "intent",
   context: {
     auth: {
       isAuthenticated: false,
@@ -17,10 +20,9 @@ const router = createRouter({
       logout: () => {},
       tokens: null,
     },
+    queryClient,
   },
 });
-
-const queryClient = new QueryClient();
 
 function App() {
   const auth = useAuth();

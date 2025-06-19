@@ -25,8 +25,8 @@ function Index() {
           disabled={isPending}
           className={`px-6 py-3 text-sm max-w-max rounded-full text-white transition-colors duration-200 font-medium shadow-sm flex items-center justify-center gap-2 ${
             isPending
-              ? "bg-gray-600 cursor-not-allowed"
-              : "bg-gray-800 cursor-pointer hover:bg-gray-900"
+              ? "bg-black/60 cursor-not-allowed"
+              : "bg-black/80 cursor-pointer hover:bg-black/90"
           }`}
         >
           {isPending ? (

@@ -14,7 +14,7 @@ export function Markdown({ filename, markdown, owner, repo }: MarkdownProps) {
   if (!markdown) return null;
 
   return (
-    <div className="mt-6 p-4 bg-gray-50 border border-gray-100 rounded-lg">
+    <div className="mt-6 p-4 bg-black/5 border border-black/10 rounded-lg">
       <h3 className="text-lg font-semibold mb-2">{filename}</h3>
       <div className="prose prose-sm prose-gray max-w-none">
         <ReactMarkdown
@@ -23,36 +23,36 @@ export function Markdown({ filename, markdown, owner, repo }: MarkdownProps) {
             img: (props) => <ImageMD {...props} owner={owner} repo={repo} />,
             code: CodeMD,
             h1: ({ children }) => (
-              <h1 className="text-2xl font-bold mt-6 mb-4 text-gray-900">
+              <h1 className="text-2xl font-bold mt-6 mb-4 text-black/90">
                 {children}
               </h1>
             ),
             h2: ({ children }) => (
-              <h2 className="text-xl font-bold mt-5 mb-3 text-gray-900">
+              <h2 className="text-xl font-bold mt-5 mb-3 text-black/90">
                 {children}
               </h2>
             ),
             h3: ({ children }) => (
-              <h3 className="text-lg font-bold mt-4 mb-2 text-gray-900">
+              <h3 className="text-lg font-bold mt-4 mb-2 text-black/90">
                 {children}
               </h3>
             ),
             p: ({ children }) => (
-              <p className="mb-3 text-gray-700 leading-relaxed text-sm">
+              <p className="mb-3 text-black/70 leading-relaxed text-sm">
                 {children}
               </p>
             ),
             ul: ({ children }) => (
-              <ul className="list-disc list-inside mb-3 space-y-1 text-gray-700">
+              <ul className="list-disc list-inside mb-3 space-y-1 text-black/70">
                 {children}
               </ul>
             ),
             ol: ({ children }) => (
-              <ol className="list-decimal list-inside mb-3 space-y-1 text-gray-700">
+              <ol className="list-decimal list-inside mb-3 space-y-1 text-black/70">
                 {children}
               </ol>
             ),
-            li: ({ children }) => <li className="text-gray-700">{children}</li>,
+            li: ({ children }) => <li className="text-black/70">{children}</li>,
             a: ({ href, children }) => (
               <a
                 href={href}
@@ -64,15 +64,15 @@ export function Markdown({ filename, markdown, owner, repo }: MarkdownProps) {
               </a>
             ),
             blockquote: ({ children }) => (
-              <blockquote className="border-l-4 border-gray-300 pl-4 italic text-gray-600 mb-3">
+              <blockquote className="border-l-4 border-black/20 pl-4 italic text-black/60 mb-3">
                 {children}
               </blockquote>
             ),
             strong: ({ children }) => (
-              <strong className="font-bold text-gray-900">{children}</strong>
+              <strong className="font-bold text-black/90">{children}</strong>
             ),
             em: ({ children }) => (
-              <em className="italic text-gray-800">{children}</em>
+              <em className="italic text-black/80">{children}</em>
             ),
           }}
         >

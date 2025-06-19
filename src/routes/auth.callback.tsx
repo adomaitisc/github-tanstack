@@ -28,7 +28,7 @@ function AuthCallback() {
     <>
       <title>Auth Callback</title>
       <div className="flex h-screen flex-col items-center justify-center">
-        <div className="px-6 py-3 text-sm max-w-max rounded-full bg-gray-600 text-white transition-colors duration-200 font-medium shadow-sm flex items-center justify-center gap-2">
+        <div className="px-6 py-3 text-sm max-w-max rounded-full bg-black/60 text-white transition-colors duration-200 font-medium shadow-sm flex items-center justify-center gap-2">
           Hand on as we complete the process...
         </div>
       </div>

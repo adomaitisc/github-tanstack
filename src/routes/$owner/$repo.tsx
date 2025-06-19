@@ -1,21 +1,32 @@
 import { createFileRoute, redirect } from "@tanstack/react-router";
+import { useQuery } from "@tanstack/react-query";
 
 import type { AuthContextType } from "../../auth";
-import { useAuth } from "../../auth";
-import { useQuery } from "@tanstack/react-query";
-import { Markdown } from "../../components/ReadmeComponent";
+import { Markdown } from "../../components/markdown";
 import { FileTree } from "../../components/file-tree";
-
-interface ReadmeData {
-  repository: {
-    object: {
-      text: string;
-    };
-  };
-}
+import {
+  githubFileTreeQueryOptions,
+  githubReadmeQueryOptions,
+} from "../../queries/github";
+import type { QueryClient } from "@tanstack/react-query";
+import { useAuth } from "../../auth";
 
 export const Route = createFileRoute("/$owner/$repo")({
   component: RouteComponent,
+  loader: async ({ context, params }) => {
+    const { owner, repo } = params;
+    const ctx = context as { auth: AuthContextType; queryClient: QueryClient };
+    if (!ctx.auth.tokens?.access_token) {
+      throw redirect({ to: "/" });
+    }
+
+    ctx.queryClient.ensureQueryData(
+      githubFileTreeQueryOptions(ctx.auth.tokens.access_token, owner, repo)
+    );
+    ctx.queryClient.ensureQueryData(
+      githubReadmeQueryOptions(ctx.auth.tokens.access_token, owner, repo)
+    );
+  },
   beforeLoad: ({ context }) => {
     const authContext = context as { auth: AuthContextType };
     if (!authContext.auth.isAuthenticated) {
@@ -28,114 +39,12 @@ function RouteComponent() {
   const { owner, repo } = Route.useParams();
   const { tokens } = useAuth();
 
-  const { data: files = [] } = useQuery({
-    queryKey: ["github-file-tree", owner, repo],
-    queryFn: async () => {
-      if (!tokens) return [];
-      const expr = `HEAD:`;
-      const response = await fetch("https://api.github.com/graphql", {
-        method: "POST",
-        headers: {
-          Authorization: `Bearer ${tokens.access_token}`,
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          query: `query Repo($owner:String!,$name:String!,$expr:String!){
-            repository(owner:$owner,name:$name){
-              object(expression:$expr){
-                ... on Tree { entries {
-                  name type oid
-                }}
-              }
-            }
-          }`,
-          variables: { owner, name: repo, expr },
-        }),
-      });
-      if (!response.ok) {
-        throw new Error(`GraphQL request failed: ${response.status}`);
-      }
-      const data = await response.json();
-      const entries = data.data.repository?.object?.entries || [];
-
-      // Get commit info for each file using REST API
-      const filesWithCommits = await Promise.all(
-        entries.map(async (entry: any) => {
-          let lastCommitMessage = undefined;
-          let lastCommitDate = undefined;
-
-          if (entry.type === "blob") {
-            try {
-              const commitResponse = await fetch(
-                `https://api.github.com/repos/${owner}/${repo}/commits?path=${entry.name}&per_page=1`,
-                {
-                  headers: {
-                    Authorization: `Bearer ${tokens.access_token}`,
-                    Accept: "application/vnd.github+json",
-                  },
-                }
-              );
-              if (commitResponse.ok) {
-                const commits = await commitResponse.json();
-                if (commits.length > 0) {
-                  lastCommitMessage = commits[0].commit.message;
-                  lastCommitDate = commits[0].commit.committer.date;
-                }
-              }
-            } catch (error) {
-              console.error(
-                `Failed to get commit info for ${entry.name}:`,
-                error
-              );
-            }
-          }
-
-          return {
-            name: entry.name,
-            type: entry.type,
-            oid: entry.oid,
-            lastCommitMessage,
-            lastCommitDate,
-          };
-        })
-      );
-
-      return filesWithCommits;
-    },
-    enabled: !!tokens,
-    staleTime: 1000 * 60 * 5, // 5 minutes
-  });
-
-  const { data: readme } = useQuery({
-    queryKey: ["github-readme", owner, repo],
-    queryFn: async () => {
-      if (!tokens) return null;
-      const response = await fetch("https://api.github.com/graphql", {
-        method: "POST",
-        headers: {
-          Authorization: `Bearer ${tokens.access_token}`,
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          query: `query Repo($owner:String!,$name:String!){
-            repository(owner:$owner,name:$name){
-              object(expression:"HEAD:README.md"){
-                ... on Blob { text }
-              }
-            }
-          }`,
-          variables: { owner, name: repo },
-        }),
-      });
-      if (!response.ok) {
-        return null;
-      }
-      const data: { data: ReadmeData } = await response.json();
-      return data.data.repository?.object?.text || null;
-    },
-    enabled: !!tokens,
-    staleTime: 1000 * 60 * 5, // 5 minutes
-  });
+  const { data: files = [] } = useQuery(
+    githubFileTreeQueryOptions(tokens?.access_token ?? "", owner, repo)
+  );
+  const { data: readme } = useQuery(
+    githubReadmeQueryOptions(tokens?.access_token ?? "", owner, repo)
+  );
 
   return (
     <>

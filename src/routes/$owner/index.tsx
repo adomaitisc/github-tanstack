@@ -1,6 +1,7 @@
 import { createFileRoute, Link, redirect } from "@tanstack/react-router";
 import { useAuth, type AuthContextType } from "../../auth";
 import { useQuery } from "@tanstack/react-query";
+import { githubRepositoriesQueryOptions } from "../../queries/github";
 
 export const Route = createFileRoute("/$owner/")({
   component: Owner,
@@ -39,44 +40,29 @@ function UserInfo() {
         className="w-16 h-16 rounded-full"
       />
       <span className="text-2xl font-bold">{user?.login}</span>
-      <span className="text-sm text-gray-500">{user?.name}</span>
+      <span className="text-sm text-black/60">{user?.name}</span>
     </div>
   );
 }
 
 function Repositories() {
   const { tokens } = useAuth();
-  const { data: repositories = [] } = useQuery({
-    queryKey: ["github-repos", tokens?.access_token],
-    queryFn: async () => {
-      if (!tokens) return [];
-      const repositoriesResponse = await fetch(
-        "https://api.github.com/user/repos?visibility=all&affiliation=owner,collaborator,organization_member&sort=pushed&per_page=100",
-        {
-          headers: {
-            Authorization: `Bearer ${tokens.access_token}`,
-            Accept: "application/vnd.github+json",
-          },
-        }
-      );
-      return repositoriesResponse.json();
-    },
-    enabled: !!tokens,
-    staleTime: 1000 * 60 * 5, // 5 minutes
-  });
+  const { data: repositories = [] } = useQuery(
+    githubRepositoriesQueryOptions(tokens?.access_token ?? "")
+  );
 
   return (
     <div className="flex flex-col items-center justify-center">
       <table className="w-full">
-        <thead>
+        <thead className="text-sm text-black/70">
           <tr>
-            <th className="text-left">repository</th>
+            <th className="text-left">Repository</th>
             <th className="text-right">ID</th>
           </tr>
         </thead>
         <tbody>
           {repositories.map((repository: any) => (
-            <tr key={repository.id} className="hover:bg-gray-100">
+            <tr key={repository.id} className="hover:bg-black/5">
               <td>
                 <Link
                   from="/$owner"
@@ -84,12 +70,12 @@ function Repositories() {
                   to={`/${repository.owner.login}/${repository.name}`}
                   className="flex p-0.5 items-center justify-between w-full cursor-pointer"
                 >
-                  <span className="text-sm text-gray-500">
+                  <span className="text-sm text-black/70">
                     {repository.owner.login}/{repository.name}
                   </span>
                 </Link>
               </td>
-              <td className="text-right p-0.5 text-sm text-gray-500 ">
+              <td className="text-right p-0.5 text-sm text-black/50 ">
                 {repository.id}
               </td>
             </tr>
