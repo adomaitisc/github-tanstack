@@ -7,12 +7,24 @@ import {
 } from "react";
 import type { ReactNode } from "react";
 
+interface User {
+  login: string;
+  name: string;
+  avatar_url: string;
+}
+
 interface Tokens {
   access_token: string;
   refresh_token: string;
 }
 
+interface AuthData {
+  user: User;
+  tokens: Tokens;
+}
+
 export interface AuthContextType {
+  user: User | null;
   tokens: Tokens | null;
   isAuthenticated: boolean;
   isPending: boolean;
@@ -23,17 +35,17 @@ export interface AuthContextType {
 
 const AuthContext = createContext<AuthContextType | null>(null);
 
-// localStorage key for storing tokens
-const TOKENS_STORAGE_KEY = "ghlf_auth_tokens";
+// localStorage key for storing auth data
+const AUTH_STORAGE_KEY = "ghlf_auth_data";
 
 export function AuthProvider({ children }: { children: ReactNode }) {
-  const [tokens, setTokens] = useState<Tokens | null>(() => {
-    // Load tokens from localStorage on initialization
+  const [authData, setAuthData] = useState<AuthData | null>(() => {
+    // Load auth data from localStorage on initialization
     try {
-      const storedTokens = localStorage.getItem(TOKENS_STORAGE_KEY);
-      return storedTokens ? JSON.parse(storedTokens) : null;
+      const storedAuth = localStorage.getItem(AUTH_STORAGE_KEY);
+      return storedAuth ? JSON.parse(storedAuth) : null;
     } catch (error) {
-      console.error("Failed to load tokens from localStorage:", error);
+      console.error("Failed to load auth data from localStorage:", error);
       return null;
     }
   });
@@ -57,10 +69,23 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const data = await response.json();
 
     if (data.access_token && data.refresh_token) {
-      setTokens({
-        access_token: data.access_token,
-        refresh_token: data.refresh_token,
+      const userResponse = await fetch("https://api.github.com/user", {
+        headers: {
+          Authorization: `Bearer ${data.access_token}`,
+          Accept: "application/vnd.github+json",
+        },
       });
+      const user = await userResponse.json();
+
+      const newAuthData: AuthData = {
+        user,
+        tokens: {
+          access_token: data.access_token,
+          refresh_token: data.refresh_token,
+        },
+      };
+
+      setAuthData(newAuthData);
       setIsPending(false);
       return true;
     }
@@ -70,32 +95,33 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const logout = useCallback(() => {
-    setTokens(null);
+    setAuthData(null);
     setIsPending(false);
   }, []);
 
-  // Save tokens to localStorage whenever they change
+  // Save auth data to localStorage whenever it changes
   useEffect(() => {
-    if (tokens) {
+    if (authData) {
       try {
-        localStorage.setItem(TOKENS_STORAGE_KEY, JSON.stringify(tokens));
+        localStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify(authData));
       } catch (error) {
-        console.error("Failed to save tokens to localStorage:", error);
+        console.error("Failed to save auth data to localStorage:", error);
       }
     } else {
       try {
-        localStorage.removeItem(TOKENS_STORAGE_KEY);
+        localStorage.removeItem(AUTH_STORAGE_KEY);
       } catch (error) {
-        console.error("Failed to remove tokens from localStorage:", error);
+        console.error("Failed to remove auth data from localStorage:", error);
       }
     }
-  }, [tokens]);
+  }, [authData]);
 
   return (
     <AuthContext.Provider
       value={{
-        tokens,
-        isAuthenticated: !!tokens,
+        user: authData?.user ?? null,
+        tokens: authData?.tokens ?? null,
+        isAuthenticated: !!authData,
         isPending,
         requestToken,
         exchangeCode,
