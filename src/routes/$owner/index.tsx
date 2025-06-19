@@ -56,8 +56,9 @@ function Repositories() {
       <table className="w-full">
         <thead className="text-sm text-black/70">
           <tr>
-            <th className="text-left">Repository</th>
-            <th className="text-right">ID</th>
+            <th className="text-left font-medium">Repository</th>
+            <th className="text-right font-medium">Description</th>
+            <th className="text-right font-medium">Stars</th>
           </tr>
         </thead>
         <tbody>
@@ -67,16 +68,19 @@ function Repositories() {
                 <Link
                   from="/$owner"
                   key={repository.id}
-                  to={`/${repository.owner.login}/${repository.name}`}
+                  to={`/${repository.full_name}`}
                   className="flex p-0.5 items-center justify-between w-full cursor-pointer"
                 >
                   <span className="text-sm text-black/70">
-                    {repository.owner.login}/{repository.name}
+                    {repository.full_name}
                   </span>
                 </Link>
               </td>
+              <td className="text-right p-0.5 truncate max-w-[200px] text-sm text-black/50 ">
+                {repository.description}
+              </td>
               <td className="text-right p-0.5 text-sm text-black/50 ">
-                {repository.id}
+                {repository.stargazers_count}
               </td>
             </tr>
           ))}

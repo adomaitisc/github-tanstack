@@ -148,29 +148,49 @@ const fetchGitHubFileTree = async (
   return filesWithCommits;
 };
 
+const possibleReadmeNames = [
+  "README.md",
+  "readme.md",
+  "Readme.md",
+  "README.markdown",
+  "readme.markdown",
+  "README",
+  "readme",
+];
+
 const fetchGitHubReadme = async (
   accessToken: string,
   owner: string,
   repo: string
 ) => {
-  const res = await fetch("https://api.github.com/graphql", {
-    method: "POST",
-    headers: {
-      Authorization: `Bearer ${accessToken}`,
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify({
-      query: `query Repo($owner:String!,$name:String!){
-        repository(owner:$owner,name:$name){
-          object(expression:"HEAD:README.md"){
-            ... on Blob { text }
+  for (const name of possibleReadmeNames) {
+    const expr = `HEAD:${name}`;
+    const res = await fetch("https://api.github.com/graphql", {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${accessToken}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        query: `
+          query Repo($owner: String!, $name: String!, $expr: String!) {
+            repository(owner: $owner, name: $name) {
+              object(expression: $expr) {
+                ... on Blob { text }
+              }
+            }
           }
-        }
-      }`,
-      variables: { owner, name: repo },
-    }),
-  });
-  if (!res.ok) return null;
-  const data = await res.json();
-  return data.data.repository?.object?.text || null;
+        `,
+        variables: { owner, name: repo, expr },
+      }),
+    });
+
+    if (!res.ok) continue;
+    const data = await res.json();
+    const text = data.data.repository?.object?.text;
+    if (text) {
+      return text;
+    }
+  }
+  return null;
 };
