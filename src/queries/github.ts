@@ -22,11 +22,12 @@ export const githubRepositoriesQueryOptions = (accessToken: string) =>
 export const githubFileTreeQueryOptions = (
   accessToken: string,
   owner: string,
-  repo: string
+  repo: string,
+  path?: string
 ) =>
   queryOptions({
-    queryKey: ["github-file-tree", owner, repo],
-    queryFn: () => fetchGitHubFileTree(accessToken, owner, repo),
+    queryKey: ["github-file-tree", owner, repo, path],
+    queryFn: () => fetchGitHubFileTree(accessToken, owner, repo, path),
     enabled: !!accessToken,
     staleTime: 1000 * 60 * 5,
   });
@@ -40,6 +41,19 @@ export const githubReadmeQueryOptions = (
     queryKey: ["github-readme", owner, repo],
     queryFn: () => fetchGitHubReadme(accessToken, owner, repo),
     enabled: !!accessToken,
+    staleTime: 1000 * 60 * 5,
+  });
+
+export const githubFileContentQueryOptions = (
+  accessToken: string,
+  owner: string,
+  repo: string,
+  path: string
+) =>
+  queryOptions({
+    queryKey: ["github-file-content", owner, repo, path],
+    queryFn: () => fetchGitHubFileContent(accessToken, owner, repo, path),
+    enabled: !!accessToken && !!path,
     staleTime: 1000 * 60 * 5,
   });
 
@@ -104,10 +118,11 @@ const fetchLastCommitForPath = async (
 const fetchGitHubFileTree = async (
   accessToken: string,
   owner: string,
-  repo: string
+  repo: string,
+  path?: string
 ) => {
   // 1. Fetch the file tree (blobs and trees)
-  const expr = `HEAD:`;
+  const expr = path ? `HEAD:${path}` : "HEAD:";
   const res = await fetch("https://api.github.com/graphql", {
     method: "POST",
     headers: {
@@ -134,8 +149,9 @@ const fetchGitHubFileTree = async (
   // 2. Fetch last commit info for each file/folder (blob/tree)
   const filesWithCommits = await Promise.all(
     entries.map(async (entry: any) => {
+      const entryPath = path ? `${path}/${entry.name}` : entry.name;
       const { lastCommitMessage, lastCommitDate } =
-        await fetchLastCommitForPath(accessToken, owner, repo, entry.name);
+        await fetchLastCommitForPath(accessToken, owner, repo, entryPath);
       return {
         name: entry.name,
         type: entry.type,
@@ -193,4 +209,50 @@ const fetchGitHubReadme = async (
     }
   }
   return null;
+};
+
+const fetchGitHubFileContent = async (
+  accessToken: string,
+  owner: string,
+  repo: string,
+  path: string
+) => {
+  const expr = `HEAD:${path}`;
+  const res = await fetch("https://api.github.com/graphql", {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${accessToken}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      query: `
+        query Repo($owner: String!, $name: String!, $expr: String!) {
+          repository(owner: $owner, name: $name) {
+            object(expression: $expr) {
+              ... on Blob { 
+                text
+                byteSize
+                isBinary
+              }
+            }
+          }
+        }
+      `,
+      variables: { owner, name: repo, expr },
+    }),
+  });
+
+  if (!res.ok) throw new Error("Failed to fetch file content");
+  const data = await res.json();
+  const blob = data.data.repository?.object;
+
+  if (!blob) {
+    throw new NotFoundError("File not found");
+  }
+
+  return {
+    content: blob.text,
+    size: blob.byteSize,
+    isBinary: blob.isBinary,
+  };
 };

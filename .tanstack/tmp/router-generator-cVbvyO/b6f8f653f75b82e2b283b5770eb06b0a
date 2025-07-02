@@ -1,0 +1,158 @@
+import { createFileRoute, redirect } from "@tanstack/react-router";
+import { useQuery } from "@tanstack/react-query";
+
+import type { AuthContextType } from "../../auth";
+import { FileTree } from "../../components/file-tree";
+import {
+  githubFileTreeQueryOptions,
+  githubReadmeQueryOptions,
+  githubFileContentQueryOptions,
+} from "../../queries/github";
+import type { QueryClient } from "@tanstack/react-query";
+import { useAuth } from "../../auth";
+import { Markdown } from "../../components/markdown";
+import { FilePreview } from "../../components/file-preview";
+
+export const Route = createFileRoute("/$owner/$")({
+  component: RouteComponent,
+  loader: async ({ context, params }) => {
+    console.log(params._splat);
+
+    // _splat is: /$owner/$repo/path/to/file.md very dynamic
+    const { owner, repo, _splat } = params;
+    const ctx = context as { auth: AuthContextType; queryClient: QueryClient };
+    if (!ctx.auth.tokens?.access_token) {
+      throw redirect({ to: "/" });
+    }
+
+    // Determine if we're looking at a file or directory
+    const path = _splat || "";
+    const isFile = path.includes(".") && !path.endsWith("/");
+
+    if (isFile) {
+      // Preload file content for files
+      ctx.queryClient.ensureQueryData(
+        githubFileContentQueryOptions(
+          ctx.auth.tokens.access_token,
+          owner,
+          repo,
+          path
+        )
+      );
+    } else {
+      // Preload file tree for directories
+      ctx.queryClient.ensureQueryData(
+        githubFileTreeQueryOptions(
+          ctx.auth.tokens.access_token,
+          owner,
+          repo,
+          path
+        )
+      );
+    }
+
+    // Always preload root file tree for navigation
+    ctx.queryClient.ensureQueryData(
+      githubFileTreeQueryOptions(ctx.auth.tokens.access_token, owner, repo)
+    );
+  },
+  beforeLoad: ({ context }) => {
+    const authContext = context as { auth: AuthContextType };
+    if (!authContext.auth.isAuthenticated) {
+      throw redirect({ to: "/" });
+    }
+  },
+});
+
+function RouteComponent() {
+  const { owner, repo, _splat } = Route.useParams();
+  const { tokens } = useAuth();
+
+  const path = _splat || "";
+  const isFile = path.includes(".") && !path.endsWith("/");
+  const isMarkdown = path.toLowerCase().endsWith(".md");
+
+  // Query for file tree (always available for navigation)
+  const { data: rootFiles = [] } = useQuery(
+    githubFileTreeQueryOptions(tokens?.access_token ?? "", owner, repo)
+  );
+
+  // Query for current directory contents (if not a file)
+  const { data: currentFiles = [] } = useQuery(
+    githubFileTreeQueryOptions(tokens?.access_token ?? "", owner, repo, path)
+  );
+
+  // Query for file content (if it's a file)
+  const { data: fileContent } = useQuery(
+    githubFileContentQueryOptions(tokens?.access_token ?? "", owner, repo, path)
+  );
+
+  // Query for README (only show on root)
+  const { data: readme } = useQuery(
+    githubReadmeQueryOptions(tokens?.access_token ?? "", owner, repo)
+  );
+
+  const displayFiles = path ? currentFiles : rootFiles;
+
+  return (
+    <>
+      <title>{`${owner}/${repo}${path ? ` - ${path}` : ""}`}</title>
+      <div className="flex flex-col items-center justify-start py-[10vh]">
+        <div className="w-full max-w-2xl px-4">
+          <h2 className="text-2xl font-bold mb-4 text-center">
+            {owner}/{repo}
+            {path && <span className="text-lg text-black/60"> - {path}</span>}
+          </h2>
+
+          {isFile ? (
+            // Show file preview
+            (<div className="w-full">
+              {isMarkdown ? (
+                <Markdown
+                  filename={path.split("/").pop() || ""}
+                  markdown={fileContent?.content}
+                  owner={owner}
+                  repo={repo}
+                />
+              ) : (
+                <FilePreview
+                  filename={path.split("/").pop() || ""}
+                  content={fileContent?.content}
+                  size={fileContent?.size}
+                  isBinary={fileContent?.isBinary}
+                />
+              )}
+            </div>)
+          ) : (
+            // Show file tree for directories
+            ((() => {
+              const { tree, preview } = FileTree({
+                files: displayFiles,
+                owner,
+                repo,
+                currentPath: path,
+                accessToken: tokens?.access_token ?? "",
+              });
+              return (
+                <>
+                  {tree}
+                  {preview}
+                </>
+              );
+            })())
+          )}
+        </div>
+
+        {/* Show README only on root */}
+        {!path && readme && (
+          <Markdown
+            filename={"README.md"}
+            markdown={readme}
+            owner={owner}
+            repo={repo}
+          />
+        )}
+      </div>
+    </>
+  )
+}

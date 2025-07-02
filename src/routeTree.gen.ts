@@ -10,21 +10,15 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as NotFoundRouteImport } from './routes/not-found'
-import { Route as HomeRouteImport } from './routes/home'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as OwnerIndexRouteImport } from './routes/$owner/index'
 import { Route as AuthSignoutRouteImport } from './routes/auth.signout'
 import { Route as AuthCallbackRouteImport } from './routes/auth.callback'
-import { Route as OwnerRepoRouteImport } from './routes/$owner/$repo'
+import { Route as OwnerSplatRouteImport } from './routes/$owner/$'
 
 const NotFoundRoute = NotFoundRouteImport.update({
   id: '/not-found',
   path: '/not-found',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const HomeRoute = HomeRouteImport.update({
-  id: '/home',
-  path: '/home',
   getParentRoute: () => rootRouteImport,
 } as any)
 const IndexRoute = IndexRouteImport.update({
@@ -47,26 +41,24 @@ const AuthCallbackRoute = AuthCallbackRouteImport.update({
   path: '/auth/callback',
   getParentRoute: () => rootRouteImport,
 } as any)
-const OwnerRepoRoute = OwnerRepoRouteImport.update({
-  id: '/$owner/$repo',
-  path: '/$owner/$repo',
+const OwnerSplatRoute = OwnerSplatRouteImport.update({
+  id: '/$owner/$',
+  path: '/$owner/$',
   getParentRoute: () => rootRouteImport,
 } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
-  '/home': typeof HomeRoute
   '/not-found': typeof NotFoundRoute
-  '/$owner/$repo': typeof OwnerRepoRoute
+  '/$owner/$': typeof OwnerSplatRoute
   '/auth/callback': typeof AuthCallbackRoute
   '/auth/signout': typeof AuthSignoutRoute
   '/$owner': typeof OwnerIndexRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
-  '/home': typeof HomeRoute
   '/not-found': typeof NotFoundRoute
-  '/$owner/$repo': typeof OwnerRepoRoute
+  '/$owner/$': typeof OwnerSplatRoute
   '/auth/callback': typeof AuthCallbackRoute
   '/auth/signout': typeof AuthSignoutRoute
   '/$owner': typeof OwnerIndexRoute
@@ -74,9 +66,8 @@ export interface FileRoutesByTo {
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
-  '/home': typeof HomeRoute
   '/not-found': typeof NotFoundRoute
-  '/$owner/$repo': typeof OwnerRepoRoute
+  '/$owner/$': typeof OwnerSplatRoute
   '/auth/callback': typeof AuthCallbackRoute
   '/auth/signout': typeof AuthSignoutRoute
   '/$owner/': typeof OwnerIndexRoute
@@ -85,27 +76,24 @@ export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
     | '/'
-    | '/home'
     | '/not-found'
-    | '/$owner/$repo'
+    | '/$owner/$'
     | '/auth/callback'
     | '/auth/signout'
     | '/$owner'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
-    | '/home'
     | '/not-found'
-    | '/$owner/$repo'
+    | '/$owner/$'
     | '/auth/callback'
     | '/auth/signout'
     | '/$owner'
   id:
     | '__root__'
     | '/'
-    | '/home'
     | '/not-found'
-    | '/$owner/$repo'
+    | '/$owner/$'
     | '/auth/callback'
     | '/auth/signout'
     | '/$owner/'
@@ -113,9 +101,8 @@ export interface FileRouteTypes {
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
-  HomeRoute: typeof HomeRoute
   NotFoundRoute: typeof NotFoundRoute
-  OwnerRepoRoute: typeof OwnerRepoRoute
+  OwnerSplatRoute: typeof OwnerSplatRoute
   AuthCallbackRoute: typeof AuthCallbackRoute
   AuthSignoutRoute: typeof AuthSignoutRoute
   OwnerIndexRoute: typeof OwnerIndexRoute
@@ -128,13 +115,6 @@ declare module '@tanstack/react-router' {
       path: '/not-found'
       fullPath: '/not-found'
       preLoaderRoute: typeof NotFoundRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/home': {
-      id: '/home'
-      path: '/home'
-      fullPath: '/home'
-      preLoaderRoute: typeof HomeRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/': {
@@ -165,11 +145,11 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthCallbackRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/$owner/$repo': {
-      id: '/$owner/$repo'
-      path: '/$owner/$repo'
-      fullPath: '/$owner/$repo'
-      preLoaderRoute: typeof OwnerRepoRouteImport
+    '/$owner/$': {
+      id: '/$owner/$'
+      path: '/$owner/$'
+      fullPath: '/$owner/$'
+      preLoaderRoute: typeof OwnerSplatRouteImport
       parentRoute: typeof rootRouteImport
     }
   }
@@ -177,9 +157,8 @@ declare module '@tanstack/react-router' {
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
-  HomeRoute: HomeRoute,
   NotFoundRoute: NotFoundRoute,
-  OwnerRepoRoute: OwnerRepoRoute,
+  OwnerSplatRoute: OwnerSplatRoute,
   AuthCallbackRoute: AuthCallbackRoute,
   AuthSignoutRoute: AuthSignoutRoute,
   OwnerIndexRoute: OwnerIndexRoute,

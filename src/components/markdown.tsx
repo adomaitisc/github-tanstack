@@ -14,7 +14,7 @@ interface MarkdownProps {
 export function Markdown({ filename, markdown, owner, repo }: MarkdownProps) {
   if (!markdown) return null;
   return (
-    <div className="prose prose-sm max-w-3xl w-full bg-black/5 mt-6 mx-2 rounded-lg px-4 py-3">
+    <div className="prose prose-sm w-full bg-black/5 rounded-lg px-4 py-3">
       <h2 className="text-sm font-medium mb-3 text-black/90">{filename}</h2>
       <ReactMarkdown
         rehypePlugins={[rehypeRaw]}
